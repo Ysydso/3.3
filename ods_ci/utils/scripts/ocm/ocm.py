@@ -84,10 +84,10 @@ class OpenshiftClusterManager:
         self.update_policies_json = args.get("update_policies_json")
         self.service_account_file = "create_gcp_sa_json.json"
         ocm_env = glob.glob(dir_path + "/../../../ocm.json.*")
-        if ocm_env != []:
+        if ocm_env:
             os.environ["OCM_CONFIG"] = ocm_env[0]
-            match = re.search(r".*\.(\S+)", (os.path.basename(ocm_env[0])))
-            if match is not None:
+            match = re.search(r".*\.(\S+)", (os.path.basename(ocm_env[0])), re.DOTALL)
+            if match:
                 self.testing_platform = match.group(1)
 
     def _is_ocmcli_installed(self):
@@ -366,7 +366,7 @@ class OpenshiftClusterManager:
             templateLoader = jinja2.FileSystemLoader(
                 searchpath=os.path.abspath(os.path.dirname(__file__)) + "/templates"
             )
-            templateEnv = jinja2.Environment(loader=templateLoader)
+            templateEnv = jinja2.Environment(loader=templateLoader, autoescape=False)  # Disable auto-escaping
             template = templateEnv.get_template(template_file)
             outputText = template.render(replace_vars)
             with open(output_file, "w") as fh:
@@ -667,7 +667,7 @@ class OpenshiftClusterManager:
 
     def install_rhoam_addon(self, exit_on_failure=True):
         if not self.is_addon_installed(addon_name="managed-api-service"):
-            add_vars = {"CIDR": "10.1.0.0/26"}
+            add_vars = {"CIDR": "10.1.0.0"}
             failure_flags = []
             failure = self.install_addon(
                 addon_name="managed-api-service",

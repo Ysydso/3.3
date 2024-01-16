@@ -32,6 +32,7 @@ class DataSciencePipelinesKfpTekton:
             # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
             os.environ["DEFAULT_ACCESSMODES"] = "ReadWriteOnce"
             import kfp_tekton
+import tempfile
 
             # the following fallback it is to simplify the test development
             try:
@@ -57,10 +58,10 @@ class DataSciencePipelinesKfpTekton:
         cert = cert_json["data"]["tls.crt"]
         decoded_cert = base64.b64decode(cert).decode("utf-8")
 
-        file_name = "/tmp/kft-cert"
-        cert_file = open(file_name, "w")
-        cert_file.write(decoded_cert)
-        cert_file.close()
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as cert_file:
+            cert_file.write(decoded_cert)
+            file_name = cert_file.name
+
         return file_name
 
     def get_secret(self, api, project, name):

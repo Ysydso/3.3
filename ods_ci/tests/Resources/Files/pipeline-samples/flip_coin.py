@@ -18,20 +18,20 @@ from kfp import components, dsl
 from ods_ci.libs.DataSciencePipelinesKfpTekton import DataSciencePipelinesKfpTekton
 
 
+import secrets
+
 def random_num(low: int, high: int) -> int:
     """Generate a random number between low and high."""
-    import random
-
-    result = random.randint(low, high)
+    result = secrets.randbelow(high - low + 1) + low
     print(result)
     return result
 
 
+import secrets
+
 def flip_coin() -> str:
     """Flip a coin and output heads or tails randomly."""
-    import random
-
-    result = "heads" if random.randint(0, 1) == 0 else "tails"
+    result = "heads" if secrets.randbelow(2) == 0 else "tails"
     print(result)
     return result
 

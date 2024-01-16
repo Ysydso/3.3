@@ -113,7 +113,7 @@ def render_template(search_path, template_file, output_file, replace_vars):
 
     try:
         templateLoader = jinja2.FileSystemLoader(searchpath=search_path)
-        templateEnv = jinja2.Environment(loader=templateLoader)
+        templateEnv = jinja2.Environment(loader=templateLoader, autoescape=False)  # Disable auto-escaping
         template = templateEnv.get_template(template_file)
         outputText = template.render(replace_vars)
         with open(output_file, "w") as fh:

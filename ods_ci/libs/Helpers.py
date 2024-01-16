@@ -235,52 +235,149 @@ class Helpers:
             ]
 
     @keyword
-    def send_random_inference_request(
-        self,
-        endpoint,
-        name="image",
-        value_range=[0, 255],
-        shape={"B": 1, "C": 3, "H": 512, "W": 512},
-        no_requests=100,
-    ):
-        import os
-        import random
-        from pathlib import Path
+    from semver import VersionInfo
 
-        import requests
+    from ods_ci.utils.scripts.ocm.ocm import OpenshiftClusterManager
 
-        for _ in range(no_requests):
-            data_img = [
-                random.randrange(value_range[0], value_range[1])
-                for _ in range(shape["C"] * shape["H"] * shape["W"])
-            ]
 
-            headers = {
-                "Content-Type": "application/x-www-form-urlencoded",
-            }
+    class Helpers:
+        """Custom keywords written in Python"""
 
-            data = (
-                '{ "model_name": "vehicle-detection-0202", "inputs": [{ "name": "'
-                + str(name)
-                + '", "shape": '
-                + str(list(shape.values()))
-                + ', "datatype": "FP32", "data": '
-                + str(data_img)
-                + " }]}"
-            )
+        def __init__(self):
+            pass
 
-            # This file only exists when running on self-managed clusters
-            ca_bundle = Path("openshift_ca.crt")
-            if ca_bundle.is_file():
-                response = requests.post(
-                    endpoint,
-                    headers=headers,
-                    data=data,
-                    verify="openshift_ca.crt",
+        @keyword
+        def text_to_list(self, text):
+            pass
+
+        @keyword
+        def gt(self, version, target):
+            pass
+
+        @keyword
+        def gte(self, version, target):
+            pass
+
+        @keyword
+        def install_rhoam_addon(self, cluster_name):
+            pass
+
+        @keyword
+        def uninstall_rhoam_using_addon_flow(self, cluster_name):
+            pass
+
+        @keyword
+        def get_cluster_name(self, cluster_identifier):
+            pass
+
+        @keyword
+        def is_rhods_addon_installed(self, cluster_name):
+            pass
+
+        @keyword
+        def uninstall_rhods_using_addon(self, cluster_name):
+            pass
+
+        @keyword
+        def update_notification_email_address(
+            self, cluster_name, email_address, addon_name="managed-odh"
+        ):
+            pass
+
+        @keyword
+        def convert_to_hours_and_minutes(self, seconds):
+            pass
+
+        @keyword
+        def install_isv_by_name(self, operator_name, channel, source="certified-operators"):
+            pass
+
+        @keyword
+        def parse_file_for_tolerations(self, filename):
+            pass
+
+        @keyword
+        def install_managed_starburst_addon(self, email_address, license, cluster_name):
+            pass
+
+        @keyword
+        def uninstall_managed_starburst_using_addon_flow(self, cluster_name):
+            pass
+
+        @keyword
+        def inference_comparison(self, expected, received, threshold=0.00001):
+            pass
+
+        @keyword
+        def send_random_inference_request(
+            self,
+            endpoint,
+            name="image",
+            value_range=[0, 255],
+            shape={"B": 1, "C": 3, "H": 512, "W": 512},
+            no_requests=100,
+        ):
+            import os
+            import random
+            from pathlib import Path
+            import requests
+
+            for _ in range(no_requests):
+                data_img = [
+                    random.randrange(value_range[0], value_range[1])
+                    for _ in range(shape["C"] * shape["H"] * shape["W"])
+                ]
+
+                headers = {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                }
+
+                data = (
+                    '{ "model_name": "vehicle-detection-0202", "inputs": [{ "name": "'
+                    + str(name)
+                    + '", "shape": '
+                    + str(list(shape.values()))
+                    + ', "datatype": "FP32", "data": '
+                    + str(data_img)
+                    + " }]}"
                 )
-            else:
-                response = requests.post(endpoint, headers=headers, data=data)
-        return response.status_code, response.text
+
+                # This file only exists when running on self-managed clusters
+                ca_bundle = Path("openshift_ca.crt")
+                if ca_bundle.is_file():
+                    response = requests.post(
+                        endpoint,
+                        headers=headers,
+                        data=data,
+                        verify="openshift_ca.crt",
+                    )
+                else:
+                    response = requests.post(endpoint, headers=headers, data=data)
+            return response.status_code, response.text
+
+        @keyword
+        def process_resource_list(self, filename_in, filename_out=None):
+            """
+            Tries to remove pseudorandom substring from openshift resource names using a regex.
+            This portion of the regex: -\b(?:[a-z]+\d|\d+[a-z])[a-z0-9]*\b tries to find an
+            alphanumeric string of any length preceded by a `-`, while the second part of the regex
+            i.e. -\b[a-z]{5}$\b, tries to find substrings of length 5 with only alphabetic characters
+            at the end of the string, or with only numbers, preceded by a `-`.
+            This has the possibility of removing valid substrings of length 5 from a resource name
+            (i.e. token) if they appear at the end of the string, however assuming the reference
+            resource list as well as the runtime list are both processed this way, this should
+            not cause an issue.
+            """
+            import re
+
+            regex = re.compile(r"-\b(?:[a-z]+\d|\d+[a-z])[a-z0-9]*\b|-\b[a-z0-9]{5}$\b")
+            out = []
+            with open(filename_in, "r") as f:
+                for line in f:
+                    spaces = line.count(" ")
+                    resource_name = line.split()[1]
+                    resource_name = regex.sub(repl="", string=resource_name)
+                    out.append(line.split()[0] + " " * spaces + resource_name + "\n")
 
     @keyword
     def process_resource_list(self, filename_in, filename_out=None):

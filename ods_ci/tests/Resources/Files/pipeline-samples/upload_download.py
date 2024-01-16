@@ -13,6 +13,8 @@ def send_file(
     import os
     import zipfile
 
+    import tempfile
+
     def create_large_file(file_path, size_in_bytes):
         with open(file_path, "wb") as f:
             f.write(os.urandom(size_in_bytes))
@@ -24,9 +26,10 @@ def send_file(
             zipf.write(input_file_path, os.path.basename(input_file_path))
 
     print("starting creating the file...")
-    file_path = "/tmp/large_file.txt"
-    create_large_file(file_path, file_size_bytes)
-    zip_file(file_path, outgoingfile)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        file_path = os.path.join(temp_dir, "large_file.txt")
+        create_large_file(file_path, file_size_bytes)
+        zip_file(file_path, outgoingfile)
     print("done")
 
 

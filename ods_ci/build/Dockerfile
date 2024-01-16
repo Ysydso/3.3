@@ -1,5 +1,10 @@
 FROM quay.io/centos/centos:stream9
 
+# Set a non-root user
+RUN useradd -m myuser
+USER myuser
+
+
 # Use this build arg to set any default test script arguments
 ENV RUN_SCRIPT_ARGS=${RUN_SCRIPT_ARGS}
 ENV ROBOT_EXTRA_ARGS=''
