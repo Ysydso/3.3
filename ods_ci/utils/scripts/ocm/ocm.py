@@ -18,6 +18,22 @@ import yaml
 dir_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(dir_path + "/../")
 from logger import log
+import argparse
+import ast
+import base64
+import glob
+import io
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from contextlib import redirect_stderr, redirect_stdout
+import jinja2
+import yaml
+from logger import log
 from util import (
     clone_config_repo,
     compare_dicts,
@@ -33,6 +49,18 @@ Class for Openshift Cluster Manager
 
 
 class OpenshiftClusterManager:
+<<<<<<< HEAD
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    sys.path.append(dir_path + "/../")
+    from util import (
+        clone_config_repo,
+        compare_dicts,
+        execute_command,
+        read_data_from_json,
+        read_yaml,
+        write_data_in_json,
+    )
+=======
     def __init__(self, args={}):
         # Initialize instance variables
         self.aws_account_id = args.get("aws_account_id")
@@ -89,6 +117,138 @@ class OpenshiftClusterManager:
             match = re.search(r".*\.(\S+)", (os.path.basename(ocm_env[0])), re.DOTALL)
             if match:
                 self.testing_platform = match.group(1)
+>>>>>>> 537331f1d902d80492a5c3349160ef613943701b
+
+    """
+    Class for Openshift Cluster Manager
+    """
+
+
+    class OpenshiftClusterManager:
+        def __init__(self, args={}):
+            # Initialize instance variables
+            self.aws_account_id = args.get("aws_account_id")
+            self.aws_access_key_id = args.get("aws_access_key_id")
+            self.aws_secret_access_key = args.get("aws_secret_access_key")
+            self.token = args.get("token")
+            self.testing_platform = args.get("testing_platform")
+            self.cluster_name = args.get("cluster_name")
+            self.aws_region = args.get("aws_region")
+            self.aws_instance_type = args.get("aws_instance_type")
+            self.num_compute_nodes = args.get("num_compute_nodes")
+            self.openshift_version = args.get("openshift_version")
+            self.channel_group = args.get("channel_group")
+            self.cloud_provider = args.get("cloud_provider")
+            self.gcp_sa_project_id = args.get("gcp_sa_project_id")
+            self.gcp_sa_private_key_id = args.get("gcp_sa_priv_key_id")
+            self.gcp_sa_private_key = args.get("gcp_sa_priv_key")
+            self.gcp_sa_client_id = args.get("gcp_sa_client_id")
+            self.gcp_sa_client_email = args.get("gcp_sa_client_email")
+            self.gcp_sa_client_cert_url = args.get("gcp_sa_client_cert_url")
+            self.compute_nodes = args.get("compute_nodes")
+            self.region = args.get("region")
+            self.compute_machine_type = args.get("compute_machine_type")
+            self.ocm_cli_binary_url = args.get("ocm_cli_binary_url")
+            self.ocm_verbose_level = args.get("ocm_verbose_level", "0")
+            self.num_users_to_create_per_group = args.get("num_users_to_create_per_group")
+            self.htpasswd_cluster_admin = args.get("htpasswd_cluster_admin")
+            self.htpasswd_cluster_password = args.get("htpasswd_cluster_password")
+            self.ldap_url = args.get("ldap_url")
+            self.ldap_bind_dn = args.get("ldap_bind_dn")
+            self.ldap_bind_password = args.get("ldap_bind_password")
+            self.ldap_users_string = args.get("ldap_users_string")
+            self.ldap_passwords_string = args.get("ldap_passwords_string")
+            self.ldap_test_password = args.get("ldap_test_password")
+            self.idp_type = args.get("idp_type")
+            self.idp_name = args.get("idp_name")
+            self.pool_instance_type = args.get("pool_instance_type")
+            self.pool_node_count = args.get("pool_node_count")
+            self.taints = args.get("taints")
+            self.pool_name = args.get("pool_name")
+            self.reuse_machine_pool = args.get("reuse_machine_pool")
+            self.notification_email = args.get("notification_email")
+            self.osd_minor_version_start = args.get("osd_minor_version_start")
+            self.osd_minor_version_end = args.get("osd_minor_version_end")
+            self.osd_major_version = args.get("osd_major_version")
+            self.osd_latest_version_data = args.get("osd_latest_version_data")
+            self.new_run = args.get("new_run")
+            self.update_ocm_channel_json = args.get("update_ocm_channel_json")
+            self.update_policies_json = args.get("update_policies_json")
+            self.service_account_file = "create_gcp_sa_json.json"
+            ocm_env = glob.glob(dir_path + "/../../../ocm.json.*")
+            if ocm_env != []:
+                os.environ["OCM_CONFIG"] = ocm_env[0]
+                match = re.search(r".*\.(\S+)", (os.path.basename(ocm_env[0])), re.DOTALL)
+                if match is not None:
+                    self.testing_platform = match.group(1)
+
+        def _is_ocmcli_installed(self):
+            """Checks if ocm cli is installed"""
+            cmd = "ocm version"
+            ret = execute_command(cmd)
+            if ret is None:
+                log.info("ocm cli not installed.")
+                return False
+            log.info("ocm cli already installed...")
+            return True
+
+        def ocm_cli_install(self):
+            """Installs ocm cli if not installed"""
+            if not self._is_ocmcli_installed():
+                log.info("Installing ocm cli...")
+                cmd = "sudo curl -Lo /bin/ocm {}".format(self.ocm_cli_binary_url)
+                ret = execute_command(cmd)
+                if ret is None:
+                    log.info("Failed to download ocm cli binary")
+                    sys.exit(1)
+
+                cmd = "sudo chmod +x /bin/ocm"
+                ret = execute_command(cmd)
+                if ret is None:
+                    log.info("Failed to give execute permission to ocm cli binary")
+                    sys.exit(1)
+
+        def ocm_describe(self, filter=""):
+            """Describes cluster and returns cluster info"""
+
+            cluster_id = self.get_osd_cluster_id()
+            cmd = "ocm describe cluster {}".format(cluster_id)
+            if filter != "":
+                cmd += " " + filter
+            ret = execute_command(cmd)
+            if ret is None or "Error: Can't retrieve cluster for key" in ret:
+                log.info("ocm describe for cluster {} failed".format(self.cluster_name))
+                return None
+            return ret
+
+        def is_osd_cluster_exists(self):
+            """Checks if cluster exists"""
+            ret = self.ocm_describe()
+            if ret is None:
+                log.info("ocm cluster with name {} not exists!".format(self.cluster_name))
+                return False
+            log.info("ocm cluster with name {} exists!".format(self.cluster_name))
+            return True
+
+        def osd_cluster_create(self):
+            # TODO: Implement osd_cluster_create method
+            pass
+
+        def get_osd_cluster_id(self):
+            # TODO: Implement get_osd_cluster_id method
+            pass
+
+        def get_osd_cluster_state(self):
+            # TODO: Implement get_osd_cluster_state method
+            pass
+
+        def get_osd_cluster_version(self):
+            # TODO: Implement get_osd_cluster_version method
+            pass
+
+        def get_osd_cluster_console_url(self):
+            # TODO: Implement get_osd_cluster_console_url method
+            pass
 
     def _is_ocmcli_installed(self):
         """Checks if ocm cli is installed"""
@@ -667,7 +827,12 @@ class OpenshiftClusterManager:
 
     def install_rhoam_addon(self, exit_on_failure=True):
         if not self.is_addon_installed(addon_name="managed-api-service"):
+<<<<<<< HEAD
+            cidr = "10.1.0.0/26"  # Replace with your desired CIDR value
+            add_vars = {"CIDR": cidr}
+=======
             add_vars = {"CIDR": "10.1.0.0"}
+>>>>>>> 537331f1d902d80492a5c3349160ef613943701b
             failure_flags = []
             failure = self.install_addon(
                 addon_name="managed-api-service",
